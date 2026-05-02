@@ -6,16 +6,23 @@ import { Progress } from '@/components/Progress'
 import { colors } from '@/theme/colors'
 import { fontFamily } from '@/theme/fontFamily'
 import { useTargetDatabase, TargetDatabase } from '@/database/useTargetDatabase'
+import { useTransactionDatabase, TransactionDatabase } from '@/database/useTransactionDatabase'
+import { Transactions } from "@/components/Transactions"
 
 export default function Details() {
   const [data, setData] = useState<TargetDatabase | null>(null)
   const { id } = useLocalSearchParams() 
   const database = useTargetDatabase()
+  const transactionsDatabase = useTransactionDatabase()
+  const [transactions, setTransactions] = useState<TransactionDatabase[]>([])
 
   async function fetchDetails() {
     try {
       const response = await database.show(Number(id))
       setData(response)
+      
+      const transactionsResponse = await transactionsDatabase.findByTarget(Number(id))
+      setTransactions(transactionsResponse)
     } catch (error) {
       console.log(error)
       Alert.alert("Erro", "Não foi possível carregar os detalhes.")
@@ -57,7 +64,7 @@ export default function Details() {
         </Text>
         <Progress percentage={(data.currentValue / data.totalValue) * 100} />
       </View>
-
+      <Transactions data={transactions} />
       <View style={{ flex: 1, justifyContent: 'flex-end', gap: 16 }}>
         <Button 
           title="Nova transação" 

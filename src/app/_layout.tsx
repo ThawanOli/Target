@@ -22,16 +22,27 @@ export default function Layout() {
 
   return (
     <SQLiteProvider 
-      databaseName="target.db" 
-      onInit={(db) => {
-        return db.execAsync(`
+      databaseName="target_v3.db" 
+      onInit={async (db) => {
+        await db.execAsync(`
           CREATE TABLE IF NOT EXISTS targets (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             title TEXT NOT NULL,
             totalValue REAL NOT NULL,
             currentValue REAL DEFAULT 0
           );
-        `)
+        `);
+
+        await db.execAsync(`
+          CREATE TABLE IF NOT EXISTS transactions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            target_id INTEGER NOT NULL,
+            amount REAL NOT NULL,
+            description TEXT,
+            created_at INTEGER NOT NULL,
+            FOREIGN KEY (target_id) REFERENCES targets (id) ON DELETE CASCADE
+          );
+        `);
       }}
     >
     <Stack 

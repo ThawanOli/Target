@@ -6,6 +6,7 @@ import { CurrencyInput } from '@/components/CurrencyInput'
 import { Input } from '@/components/Input'
 import { Button } from '@/components/Button'
 import { useTargetDatabase } from '@/database/useTargetDatabase'
+import { useTransactionDatabase } from '@/database/useTransactionDatabase'
 
 export default function Transaction() {
   const { id } = useLocalSearchParams()
@@ -13,6 +14,8 @@ export default function Transaction() {
   const [value, setValue] = useState<number | null>(0)
   const [isLoading, setIsLoading] = useState(false)
   const database = useTargetDatabase()
+  const transactionsDatabase = useTransactionDatabase()
+  const [description, setDescription] = useState("")
 
   async function handleSave() {
     try {
@@ -23,6 +26,11 @@ export default function Transaction() {
       setIsLoading(true)
 
       const finalAmount = type === 'input' ? value : -value
+      await transactionsDatabase.create({
+        targetId: Number(id),
+        amount: finalAmount,
+        description: description, 
+      })
 
       await database.updateAmount(Number(id), finalAmount)
       
@@ -44,7 +52,12 @@ export default function Transaction() {
     </View>
       <CurrencyInput label="Valor (R$)" value={value} onChangeValue={setValue} />
 
-      <Input label="Motivo (opcional)" placeholder="Ex: Investir em CDB de 110%..." />
+      <Input 
+        label="Motivo (opcional)"
+        placeholder="Ex: Investir em CDB de 110%..." 
+        onChangeText={setDescription} 
+        value={description} 
+        />
 
       <View style={{ flex: 1, justifyContent: 'flex-end' }}>
         <Button 
