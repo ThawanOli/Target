@@ -1,80 +1,44 @@
-import { useSQLiteContext } from "expo-sqlite"
+import { useSQLiteContext } from "expo-sqlite";
 
 export type TargetDatabase = {
-  id: number
-  title: string
-  totalValue: number
-  currentValue: number
-}
+  id: number;
+  name: string;
+  amount: number;
+  accumulated: number;
+};
 
 export function useTargetDatabase() {
-  const database = useSQLiteContext()
+  const database = useSQLiteContext();
 
-  async function create(data: Omit<TargetDatabase, "id">) {
-    const statement = await database.prepareAsync(
-      "INSERT INTO targets (title, totalValue, currentValue) VALUES ($title, $totalValue, $currentValue)"
-    )
-
-    try {
-      const result = await statement.executeAsync({
-        $title: data.title,
-        $totalValue: data.totalValue,
-        $currentValue: data.currentValue,
-      })
-
-      const insertedRowId = result.lastInsertRowId.toLocaleString()
-      return { insertedRowId }
-    } catch (error) {
-      throw error
-    } finally {
-      await statement.finalizeAsync()
-    }
+  async function create(data: { name: string; amount: number }) {
+    const query = "INSERT INTO targets (name, amount) VALUES (?, ?)"; 
+    await database.runAsync(query, [data.name, data.amount]); 
   }
 
   async function list() {
-    try {
-      const query = "SELECT * FROM targets"
-      const response = await database.getAllAsync<TargetDatabase>(query)
-      return response
-    } catch (error) {
-      throw error
-    }
+    const query = `
+      SELECT t.id, t.name, t.amount, COALESCE(SUM(tr.amount), 0) AS accumulated
+      FROM targets t
+      LEFT JOIN transactions tr ON tr.target_id = t.id
+      GROUP BY t.id;
+    `; 
+    return await database.getAllAsync<TargetDatabase>(query);
   }
 
   async function show(id: number) {
-    try {
-      const query = "SELECT * FROM targets WHERE id = ?"
-      const response = await database.getFirstAsync<TargetDatabase>(query, [id])
-      return response
-    } catch (error) {
-      throw error
-    }
-  }
-
-  async function updateAmount(id: number, amount: number) {
-    const statement = await database.prepareAsync(
-      "UPDATE targets SET currentValue = currentValue + $amount WHERE id = $id"
-    )
-
-    try {
-      await statement.executeAsync({
-        $amount: amount,
-        $id: id,
-      })
-    } catch (error) {
-      throw error
-    } finally {
-      await statement.finalizeAsync()
-    }
+    const query = `
+      SELECT t.*, COALESCE(SUM(tr.amount), 0) AS accumulated
+      FROM targets t
+      LEFT JOIN transactions tr ON tr.target_id = t.id
+      WHERE t.id = ?
+      GROUP BY t.id;
+    `; 
+    return await database.getFirstAsync<TargetDatabase>(query, [id]);
   }
 
   async function remove(id: number) {
-  try {
-    await database.execAsync(`DELETE FROM targets WHERE id = ${id}`)
-  } catch (error) {
-    throw error
+    await database.execAsync(`DELETE FROM targets WHERE id = ${id}`); 
   }
-}
 
-  return { create, list, show, updateAmount, remove }
+  return { create, list, show, remove };
 }

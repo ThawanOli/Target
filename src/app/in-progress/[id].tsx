@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { View, Text, Alert } from 'react-native'
 import { useLocalSearchParams, router, useFocusEffect } from 'expo-router'
 import { Button } from '@/components/Button'
@@ -6,22 +6,27 @@ import { Progress } from '@/components/Progress'
 import { colors } from '@/theme/colors'
 import { fontFamily } from '@/theme/fontFamily'
 import { useTargetDatabase, TargetDatabase } from '@/database/useTargetDatabase'
-import { useTransactionDatabase, TransactionDatabase } from '@/database/useTransactionDatabase'
+import { useTransactionDatabase } from '@/database/useTransactionDatabase'   
 import { Transactions } from "@/components/Transactions"
 
 export default function Details() {
   const [data, setData] = useState<TargetDatabase | null>(null)
+  const [transactions, setTransactions] = useState<any[]>([])
+  
   const { id } = useLocalSearchParams() 
   const database = useTargetDatabase()
   const transactionsDatabase = useTransactionDatabase()
-  const [transactions, setTransactions] = useState<TransactionDatabase[]>([])
 
   async function fetchDetails() {
     try {
-      const response = await database.show(Number(id))
-      setData(response)
+      if (!id) return;
+
+      const p1 = database.show(Number(id))
+      const p2 = transactionsDatabase.findByTarget(Number(id))
       
-      const transactionsResponse = await transactionsDatabase.findByTarget(Number(id))
+      const [targetResponse, transactionsResponse] = await Promise.all([p1, p2])
+
+      setData(targetResponse)
       setTransactions(transactionsResponse)
     } catch (error) {
       console.log(error)
@@ -30,46 +35,49 @@ export default function Details() {
   }
 
   async function handleRemove() {
-  Alert.alert("Remover", "Deseja realmente remover esta meta?", [
-    { text: "Não", style: "cancel" },
-    { 
-      text: "Sim", 
-      onPress: async () => {
-        await database.remove(Number(id))
-        router.back()
-      } 
-    }
-  ])
-}
+    Alert.alert("Remover", "Deseja realmente remover esta meta?", [
+      { text: "Não", style: "cancel" },
+      { 
+        text: "Sim", 
+        onPress: async () => {
+          await database.remove(Number(id))
+          router.navigate('/') 
+        } 
+      }
+    ])
+  }
 
   useFocusEffect(
     useCallback(() => {
-    fetchDetails()
-  }, [])
-)
+      fetchDetails()
+    }, [id])
+  )
+
   if (!data) return null
 
+  const percentage = data ? (data.accumulated / data.amount) * 100 : 0;
   return (
-    <View style={{ flex: 1, backgroundColor: colors.white, padding: 24, gap: 32 }}>
-      <View style={{ marginTop: 32 }}>
-        <Text style={{ fontSize: 24, fontFamily: fontFamily.bold }}>{data.title}</Text>
-        <Text style={{ fontSize: 16, color: colors.gray[500], fontFamily: fontFamily.regular }}>
-          Alvo: R$ {data.totalValue.toLocaleString('pt-BR')}
-        </Text>
-      </View>
+   <View style={{ flex: 1, backgroundColor: colors.white, padding: 24, gap: 32 }}>
+    <View style={{ marginTop: 32 }}>
+      <Text style={{ fontSize: 24, fontFamily: fontFamily.bold }}>{data.name}</Text>
+      <Text style={{ fontSize: 16, color: colors.gray[500] }}>
+        Alvo: R$ {data.amount.toLocaleString('pt-BR')}
+      </Text>
+    </View>
 
       <View style={{ gap: 12 }}>
         <Text style={{ fontSize: 32, fontFamily: fontFamily.bold, color: colors.blue[500] }}>
-          R$ {data.currentValue.toLocaleString('pt-BR')}
+          R$ {data.accumulated.toLocaleString('pt-BR')}
         </Text>
-        <Progress percentage={(data.currentValue / data.totalValue) * 100} />
+        <Progress percentage={percentage} />
       </View>
+
       <Transactions data={transactions} />
+
       <View style={{ flex: 1, justifyContent: 'flex-end', gap: 16 }}>
         <Button 
           title="Nova transação" 
           onPress={() => router.navigate(`/transaction/${id}`)} 
-          
         />
 
         <Button 

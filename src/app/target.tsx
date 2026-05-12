@@ -8,23 +8,21 @@ import { colors } from '@/theme/colors'
 import { useTargetDatabase } from '@/database/useTargetDatabase'
 
 export default function Target() {
-  const [title, setTitle] = useState("")
-  const [totalValue, setTotalValue] = useState<number | null>(0)
+  const [name, setName] = useState("")
+  const [amount, setAmount] = useState<number | null>(0)
   const [isLoading, setIsLoading] = useState(false)
   const targetDatabase = useTargetDatabase()
 
   async function handleSave() {
     try {
-      if (!title.trim() || !totalValue || totalValue <= 0) {
+      if (!name.trim() || !amount || amount <= 0) {
         return Alert.alert("Atenção", "Preencha o nome e um valor válido para a meta.")
       }
-
       setIsLoading(true)
 
       await targetDatabase.create({
-        title,
-        totalValue,
-        currentValue: 0 
+        name: name,
+        amount: amount
       })
 
       Alert.alert("Sucesso", "Meta cadastrada com sucesso!")
@@ -46,22 +44,20 @@ export default function Target() {
       <Input 
         label="Nome da meta" 
         placeholder="Ex: Viagem para o Japão" 
-        onChangeText={setTitle}
+        onChangeText={setName} 
       />
       
       <CurrencyInput 
-        label="Valor alvo" 
-        value={totalValue} 
-        onChangeValue={setTotalValue} 
+        label="Valor Alvo" 
+        value={amount}
+        onChangeValue={setAmount}
       />
 
-      <View style={{ flex: 1, justifyContent: 'flex-end' }}>
-        <Button 
-          title="Salvar" 
-          onPress={handleSave} 
-          isLoading={isLoading}
-        />
-      </View>
+      <Button 
+        title="Salvar" 
+        isLoading={isLoading} 
+        onPress={handleSave} 
+      />
     </View>
   )
 }

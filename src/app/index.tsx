@@ -1,7 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { ScrollView, View, Text, Alert } from 'react-native'
 import { router, useFocusEffect } from 'expo-router'
-import { useCallback } from 'react'
 import { HomeHeader } from '@/components/HomeHeader'
 import { Button } from '@/components/Button'
 import { TargetCard, TargetCardProps } from '@/components/TargetCard'
@@ -25,7 +24,11 @@ export default function Index() {
 
   useFocusEffect(
     useCallback(() => {
-      fetchTargets()
+      async function loadData() {
+        const data = await targetDatabase.list()
+        setTargets(data)
+      }
+      loadData()
     }, [])
   )
 
@@ -38,18 +41,18 @@ export default function Index() {
           Minhas Metas ({targets.length})
         </Text>
 
-        {targets.map((item) => (
-          <TargetCard 
-            key={item.id}
-            data={{
-              id: String(item.id),
-              title: item.title,
-              currentValue: item.currentValue,
-              totalValue: item.totalValue
-            }} 
-            onPress={() => router.navigate(`/in-progress/${item.id}`)}
-          />
-        ))}
+       {targets.map((item) => (
+        <TargetCard 
+          key={item.id}
+          data={{
+            id: String(item.id),
+            title: item.name,
+            currentValue: item.accumulated, 
+            totalValue: item.amount     
+          }} 
+          onPress={() => router.navigate(`/in-progress/${item.id}`)}
+        />
+      ))}
 
         {targets.length === 0 && (
           <Text style={{ color: colors.gray[500], textAlign: 'center', marginTop: 50 }}>
